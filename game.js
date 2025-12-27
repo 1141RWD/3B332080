@@ -751,17 +751,93 @@ p.particles.forEach(pt => {
 
   ctx.restore();
 
-  // 8. 血條 UI (固定位置繪製)
-  const isP1 = label === 'P1';
-  const bx = isP1 ? 30 : canvas.width - 180;
-  ctx.fillStyle = 'rgba(255,255,255,0.1)'; 
-  ctx.fillRect(bx, 30, 150, 15);
-  ctx.fillStyle = p.hp > 2 ? p.color : '#ff4444';
-  ctx.fillRect(bx, 30, (Math.max(0, p.hp) / 6) * 150, 15);
-  ctx.fillStyle = '#fff'; 
-  ctx.font = 'bold 14px Arial';
-  ctx.textAlign = 'left';
-  ctx.fillText(label === 'CPU' ? 'CPU (Jelly)' : label, bx, 25);
+  // 8. 果凍風格血條 UI (Jelly Style)
+const isP1 = label === 'P1';
+const bx = isP1 ? 30 : canvas.width - 190;
+const bw = 160;
+const bh = 18; // 稍微加厚增加肉感
+const radius = 9; // 更圓潤的弧度像果凍
+
+ctx.save();
+
+const hpRatio = Math.max(0, p.hp) / 6;
+const isLowHP = hpRatio < 0.4;
+// 呼吸頻率（果凍般的震動）
+const breath = (Math.sin(Date.now() / 400) + 1) / 2;
+
+// A. 果凍槽底座 (深色半透明磨砂)
+ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+if (ctx.roundRect) {
+  ctx.beginPath();
+  ctx.roundRect(bx - 3, 30 - 3, bw + 6, bh + 6, radius + 2);
+  ctx.fill();
+}
+
+// B. 繪製果凍血條
+if (hpRatio > 0) {
+  const barWidth = hpRatio * bw;
+  
+  // 1. 核心顏色漸層 (由內向外發散的感覺)
+  const gradient = ctx.createLinearGradient(bx, 30, bx, 30 + bh);
+  
+  // 殘血時顏色變暗淡且變透明
+  const jellyAlpha = isLowHP ? (0.3 + breath * 0.4) : 0.85;
+  ctx.globalAlpha = jellyAlpha;
+
+  gradient.addColorStop(0, p.color); // 頂部主色
+  gradient.addColorStop(0.5, p.color); 
+  gradient.addColorStop(1, 'rgba(0,0,0,0.3)'); // 底部深色營造沉積感
+  
+  ctx.fillStyle = gradient;
+  if (ctx.roundRect) {
+    ctx.beginPath();
+    // 這裡寬度做微小的震動縮放，模擬果凍彈性
+    const wiggle = isLowHP ? (Math.sin(Date.now() / 100) * 2) : 0;
+    ctx.roundRect(bx, 30, Math.max(0, barWidth + wiggle), bh, radius);
+    ctx.fill();
+  }
+
+  // 2. 果凍亮面 (High Light) - 這是果凍質感的關鍵
+  ctx.globalAlpha = 0.4;
+  ctx.fillStyle = '#FFFFFF';
+  if (ctx.roundRect) {
+    ctx.beginPath();
+    // 在上方畫一個橢圓形長條亮光
+    ctx.roundRect(bx + 4, 30 + 3, barWidth - 8, bh / 3, radius / 2);
+    ctx.fill();
+  }
+
+  // 3. 內發光 (能量感)
+  if (!isLowHP) {
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(bx, 30, barWidth, bh);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+}
+
+// C. 文字優化 (配合果凍主題)
+ctx.globalAlpha = 1.0;
+ctx.shadowBlur = 4;
+ctx.shadowColor = 'rgba(0,0,0,0.8)';
+ctx.fillStyle = '#FFFFFF';
+ctx.font = 'bold 15px "Verdana", sans-serif';
+ctx.textAlign = isP1 ? 'left' : 'right';
+
+// 根據模式顯示名字
+const displayName = label === 'CPU' ? 'JELLY AI' : `JELLY ${label}`;
+const textX = isP1 ? bx : bx + bw;
+ctx.fillText(displayName, textX, 22);
+
+// D. 角色小圖示 (裝飾用的小果凍球)
+ctx.fillStyle = p.color;
+ctx.beginPath();
+ctx.arc(isP1 ? bx - 12 : bx + bw + 12, 16, 5 + (breath * 2), 0, Math.PI * 2);
+ctx.fill();
+
+ctx.restore();
+
 }
 function loop() {
   // --- 暫停邏輯優化 ---
